@@ -1,6 +1,6 @@
 # Ultra-Safe Multi-Symbol Crypto Bot
 
-This bot trades **BTC, ETH, BNB, ADA, SOL** on Binance Futures using **ultra-safe risk management**.  
+This bot trades **BTC, ETH, BNB, ADA, SOL** on Binance Futures with **ultra-safe risk management**.  
 
 ## Features
 
