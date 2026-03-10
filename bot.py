@@ -1,6 +1,4 @@
-# bot.py
-
-import ccxt, time, pandas as pd, pandas_ta as ta
+import ccxt, time, pandas as pd, pandas_ta as ta, csv
 from utils import send_telegram, start_heartbeat
 from config import *
 
@@ -60,6 +58,12 @@ def check_short_signal(df, symbol):
         last['close'] < last['open']
     ])
 
+# ---------------- TRADE LOGGING ----------------
+def log_trade(symbol, direction, entry_price, exit_price, amount, result):
+    with open('trade_log.csv', mode='a', newline='') as file:
+        writer = csv.writer(file)
+        writer.writerow([time.strftime("%Y-%m-%d %H:%M:%S"), symbol, direction, entry_price, exit_price, amount, result])
+
 # ---------------- POSITION SIZE ----------------
 def calculate_position(df, direction, symbol):
     last_price = df['close'].iloc[-1]
@@ -86,7 +90,6 @@ def monitor_trade(direction, entry_price, sl, tp, amount, symbol):
         ticker = exchange.fetch_ticker(symbol)
         last_price = ticker['last']
 
-        # ATR trailing stop
         if direction=="LONG" and last_price-entry_price > atr*0.5:
             sl = max(sl, last_price - atr*1.0)
         if direction=="SHORT" and entry_price-last_price > atr*0.5:
@@ -97,6 +100,7 @@ def monitor_trade(direction, entry_price, sl, tp, amount, symbol):
             if direction=="LONG": exchange.create_market_sell_order(symbol, amount)
             else: exchange.create_market_buy_order(symbol, amount)
             send_telegram(f"⚠️ Stop-loss hit! {symbol} {direction} closed at {last_price}")
+            log_trade(symbol, direction, entry_price, last_price, amount, "LOSS")
             return False
 
         # Take-profit
@@ -104,6 +108,7 @@ def monitor_trade(direction, entry_price, sl, tp, amount, symbol):
             if direction=="LONG": exchange.create_market_sell_order(symbol, amount)
             else: exchange.create_market_buy_order(symbol, amount)
             send_telegram(f"✅ Take-profit hit! {symbol} {direction} closed at {last_price}")
+            log_trade(symbol, direction, entry_price, last_price, amount, "PROFIT")
             return True
 
         time.sleep(1)
@@ -121,11 +126,10 @@ def main():
     while True:
         try:
             if check_daily_loss():
-                time.sleep(60*60)  # pause 1 hour
+                time.sleep(60*60)
                 continue
 
             for symbol in TRADING_SYMBOLS:
-                # Skip if open positions exist
                 positions = exchange.fetch_positions()
                 if any(p['symbol']==symbol.replace("/","") and float(p['contracts'])>0 for p in positions):
                     continue
