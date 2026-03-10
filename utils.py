@@ -1,5 +1,3 @@
-# utils.py
-
 import threading, requests
 from telegram import Bot
 from config import TELEGRAM_TOKEN, TELEGRAM_CHAT_ID, HEARTBEAT_URL, PING_INTERVAL
